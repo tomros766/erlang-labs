@@ -13,19 +13,22 @@
 -record(measurement, {date, type}).
 %% API
 
-
+% funkcja na podstawie nazwy lub wspolrzednych zwraca cala krotke (pelny klucz w mapie)
 getFullKey([], Key) -> error;
 getFullKey([#station{name=Key, coords=Coords} | _], Key) -> #station{name=Key, coords=Coords};
 getFullKey([#station{name=Name, coords=Key} | _], Key) -> #station{name=Name, coords=Key};
 getFullKey([_ | T], Key) -> getFullKey(T, Key).
 
-
+% funkcja wylicza srednia wartosc w liscie
 getMean([], Sum, Size) -> Sum/Size;
 getMean([H | T], Sum, Size) -> getMean(T, Sum + H, Size + 1).
 
+
+%funkcja zwraca nowa, pusta mape
 createMonitor() ->
   #{}.
 
+%funkcja dodaje stacje pomiaru do monitora
 addStation(Name, Coords, Monitor) ->
   ValName = getFullKey(maps:keys(Monitor), Name),
   ValCoords = getFullKey(maps:keys(Monitor), Coords),
@@ -39,6 +42,7 @@ addStation(Name, Coords, Monitor) ->
         Monitor
   end.
 
+%funkcja dodaje wartosc do dane stacji
 addValue(Key, Date, Type, Value, Monitor) ->
   Values = maps:find(getFullKey(maps:keys(Monitor), Key), Monitor),
   case Values of
@@ -57,7 +61,7 @@ addValue(Key, Date, Type, Value, Monitor) ->
       end
   end.
 
-
+%funkcja usuwa pomiar z danej stacji
 removeValue(Monitor, Key, Date, Type) ->
   FullKey = maps:find(getFullKey(maps:keys(Monitor), Key), Monitor),
   case FullKey of
@@ -67,7 +71,7 @@ removeValue(Monitor, Key, Date, Type) ->
       Monitor
   end.
 
-
+%funkcja zwraca wartosc konkretengo pomiaru z danej stacji
 getOneValue(Monitor, Key, Date, Type) ->
   FullKey = maps:find(getFullKey(maps:keys(Monitor), Key), Monitor),
   case FullKey of
@@ -79,6 +83,7 @@ getOneValue(Monitor, Key, Date, Type) ->
       end
   end.
 
+%funkcja zwraca srednia wartosc danego typu zanieczyszczen z danej stacji
 getStationMean(Monitor, Key, Type) ->
   FullKey = maps:find(getFullKey(maps:keys(Monitor), Key), Monitor),
   case FullKey of
@@ -87,12 +92,13 @@ getStationMean(Monitor, Key, Type) ->
       getMean(filterByType(maps:to_list(Measurements), Type, []), 0, 0)
   end.
 
+%funkcja zwraca srednia wartosc danego typu zanieczyszczen ze wszystkich stacji w ciagu danego dnia
 getDailyMean(Monitor, Day, Type) ->
   Measurements = maps:values(Monitor),
   Filtered = filterByDay(Measurements, Day, Type, []),
   getMean(Filtered, 0, 0).
 
-
+%funkcja zwraca liste wartosci pomiarow, ktore odbyly sie danego dnia
 filterByDay([], Day, Type, Vals) -> Vals;
 filterByDay([H | T], Day, Type, Vals) ->
   Keys = maps:keys(H),
@@ -104,6 +110,7 @@ filterByDay([H | T], Day, Type, Vals) ->
       filterByDay(T, Day, Type, [Val | Vals])
   end.
 
+%funkcja sprawcza czy dany pomiar istnieje w zbiorze pomiarow, zwraca klucz jesli istnieje lub error w przeciwnym wypadku
 isMember([], Day, Type) -> error;
 isMember([H|T], Day ,Type)  ->
   case H of
@@ -111,10 +118,55 @@ isMember([H|T], Day ,Type)  ->
     _ -> isMember(T, Day, Type)
   end.
 
-
+%funkcja zwraca liste wartosci pomiarow danego typu
 filterByType([], _, Vals) -> Vals;
 filterByType([H | T], Type, Vals) ->
   case H of
     {#measurement{type=Type}, Val} -> filterByType(T, Type, [Val | Vals]);
     _ -> filterByType(T, Type, Vals)
   end.
+
+%funkcja zwraca liste wartosci pomiarow z danego obszaru
+filterByArea(_, [], Vals) -> Vals;
+filterByArea({{Xl, Yl}, {Xr, Yr}}, [{#station{coords={X, Y}}, Val} | T] , Vals) when X > Xl, X < Xr, Y > Yl, Y < Yr ->
+  filterByArea({{Xl, Yl}, {Xr, Yr}}, T, [Val | Vals]);
+filterByArea(Border, [_ | T], Vals) -> filterByArea(Border, T, Vals).
+
+% funkcja zwraca informacje o najwyzszej wartosci pomiarow danego typu wraz z informacja z ktorej stacji pochodzi pomiar
+getMaxPollution(Monitor, Type) ->
+  Values = getMaxValuesWithStation(Monitor, maps:keys(Monitor), Type, []),
+  getMaxWithStation(Values, station, 0).
+
+
+%funkcja zwraca krotke {stacja, wartosc} dla najwiekszej wartosci pomiaru
+getMaxWithStation([], MaxStation, MaxVal) -> {MaxStation, MaxVal};
+getMaxWithStation([{Station, Val} | T], _, MaxVal) when Val > MaxVal -> getMaxWithStation(T, Station, Val);
+getMaxWithStation([_ | T], MaxStation, MaxVal) -> getMaxWithStation(T, MaxStation, MaxVal).
+
+
+%funkcja zwraca liste najwiekszych wartosci danego pomiaru wraz z informacja z ktorej stacji pochodzi pomiar
+getMaxValuesWithStation(Monitor, [], Type, Values) -> Values;
+getMaxValuesWithStation(Monitor, [Key | Keys], Type, Values) ->
+  Vals = filterByType(maps:to_list(maps:get(Key, Monitor)), Type, []),
+  getMaxValuesWithStation(Monitor, Keys, Type, [{Key, lists:max(Vals)} | Values]).
+
+
+%funkcja zwraca liste wartosci pomiaru danego typu wraz z inforamcja o stacji
+getValuesWithStation(Monitor, [], Type, Values) -> Values;
+getValuesWithStation(Monitor ,[Key | Keys], Type, Values) ->
+  Vals = filterByType(maps:to_list(maps:get(Key, Monitor)), Type, []),
+  getValuesWithStation(Monitor, Keys, Type, [{Key, Val} || Val <- Vals] ++ Values).
+
+
+%funkcja zwraca srednia wartosc pomiaru danego typu w danym obszarze na wszystkich stacjach, funkcja przyjmuje wspolrzede {lewy_dolny, prawy_gorny}
+getMeanFromArea(Monitor, Type, Border) ->
+  Values = getValuesWithStation(Monitor, maps:keys(Monitor), Type, []),
+  Filtered = filterByArea(Border, Values, []),
+  getMean(Filtered, 0, 0).
+
+
+
+
+
+
+
