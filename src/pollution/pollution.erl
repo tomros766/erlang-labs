@@ -11,7 +11,9 @@
 -author("tomasz").
 -record(station, {name, coords}).
 -record(measurement, {date, type}).
+
 %% API
+
 
 % funkcja na podstawie nazwy lub wspolrzednych zwraca cala krotke (pelny klucz w mapie)
 getFullKey([], Key) -> error;
@@ -62,19 +64,18 @@ addValue(Key, Date, Type, Value, Monitor) ->
   end.
 
 %funkcja usuwa pomiar z danej stacji
-removeValue(Monitor, Key, Date, Type) ->
-  FullKey = maps:find(getFullKey(maps:keys(Monitor), Key), Monitor),
-  case FullKey of
+removeValue(Key, Date, Type, Monitor) ->
+  Values = maps:find(getFullKey(maps:keys(Monitor), Key), Monitor),
+  case Values of
     error -> io:format("Nie ma takiej stacji! ~n"),
       Monitor;
-    {ok, Measurements} -> maps:remove(#measurement{date=Date, type=Type}, Measurements),
-      Monitor
+    {ok, Measurements} ->  maps:update(getFullKey(maps:keys(Monitor), Key), maps:remove(#measurement{date=Date, type=Type}, Measurements), Monitor)
   end.
 
 %funkcja zwraca wartosc konkretengo pomiaru z danej stacji
-getOneValue(Monitor, Key, Date, Type) ->
-  FullKey = maps:find(getFullKey(maps:keys(Monitor), Key), Monitor),
-  case FullKey of
+getOneValue(Key, Date, Type, Monitor) ->
+  Values = maps:find(getFullKey(maps:keys(Monitor), Key), Monitor),
+  case Values of
     error -> io:format("Nie ma takiej stacji! ~n");
     {ok, Measurements} -> Value = maps:find(#measurement{date=Date, type=Type}, Measurements),
       case Value of
@@ -84,7 +85,7 @@ getOneValue(Monitor, Key, Date, Type) ->
   end.
 
 %funkcja zwraca srednia wartosc danego typu zanieczyszczen z danej stacji
-getStationMean(Monitor, Key, Type) ->
+getStationMean(Key, Type, Monitor) ->
   FullKey = maps:find(getFullKey(maps:keys(Monitor), Key), Monitor),
   case FullKey of
     error -> io:format("Nie ma takiej stacji! ~n");
@@ -93,7 +94,7 @@ getStationMean(Monitor, Key, Type) ->
   end.
 
 %funkcja zwraca srednia wartosc danego typu zanieczyszczen ze wszystkich stacji w ciagu danego dnia
-getDailyMean(Monitor, Day, Type) ->
+getDailyMean(Day, Type, Monitor) ->
   Measurements = maps:values(Monitor),
   Filtered = filterByDay(Measurements, Day, Type, []),
   getMean(Filtered, 0, 0).
@@ -133,7 +134,7 @@ filterByArea({{Xl, Yl}, {Xr, Yr}}, [{#station{coords={X, Y}}, Val} | T] , Vals) 
 filterByArea(Border, [_ | T], Vals) -> filterByArea(Border, T, Vals).
 
 % funkcja zwraca informacje o najwyzszej wartosci pomiarow danego typu wraz z informacja z ktorej stacji pochodzi pomiar
-getMaxPollution(Monitor, Type) ->
+getMaxPollution(Type, Monitor) ->
   Values = getMaxValuesWithStation(Monitor, maps:keys(Monitor), Type, []),
   getMaxWithStation(Values, station, 0).
 
@@ -159,7 +160,7 @@ getValuesWithStation(Monitor ,[Key | Keys], Type, Values) ->
 
 
 %funkcja zwraca srednia wartosc pomiaru danego typu w danym obszarze na wszystkich stacjach, funkcja przyjmuje wspolrzede {lewy_dolny, prawy_gorny}
-getMeanFromArea(Monitor, Type, Border) ->
+getMeanFromArea(Type, Border, Monitor) ->
   Values = getValuesWithStation(Monitor, maps:keys(Monitor), Type, []),
   Filtered = filterByArea(Border, Values, []),
   getMean(Filtered, 0, 0).
