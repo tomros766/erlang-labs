@@ -37,19 +37,16 @@ addStation(Name, Coords, Monitor) ->
   case ValName of
     error -> case ValCoords of
                error -> Monitor#{#station{name=Name, coords=Coords} => maps:new()};
-               _ -> io:format("Monitor o takich wspolrzednych juz istnieje! ~n"),
-                 Monitor
+               _ -> {error, "Monitor o takiej nazwie istnieje!"}
              end;
-    _ -> io:format("Monitor o takiej nazwie już istnieje! ~n "),
-        Monitor
+    _ -> {error, "Monitor o takiej nazwie istnieje!"}
   end.
 
 %funkcja dodaje wartosc do dane stacji
 addValue(Key, Date, Type, Value, Monitor) ->
   Values = maps:find(getFullKey(maps:keys(Monitor), Key), Monitor),
   case Values of
-    error -> io:format("Stacja nie istnieje! ~n"),
-              Monitor;
+    error -> {error, "Stacja nie istnieje!"};
     {ok, Measurements} -> TestVal = maps:find(#measurement{date=Date, type=Type}, Measurements),
       case TestVal of
         error ->
@@ -58,8 +55,8 @@ addValue(Key, Date, Type, Value, Monitor) ->
             Size =:= 0 -> maps:put(getFullKey(maps:keys(Monitor), Key), maps:put(#measurement{date=Date, type=Type}, Value, Measurements), Monitor);
             true -> maps:update(getFullKey(maps:keys(Monitor), Key),maps:put(#measurement{date=Date, type=Type}, Value, Measurements), Monitor)
           end;
-        _ -> io:format("Pomiar tego typu o tej godzinie juz istnieje! ~n"),
-          Monitor
+        _ -> {error, "Pomiar tego typu o tej godzinie juz istnieje!"}
+          
       end
   end.
 
@@ -67,8 +64,7 @@ addValue(Key, Date, Type, Value, Monitor) ->
 removeValue(Key, Date, Type, Monitor) ->
   Values = maps:find(getFullKey(maps:keys(Monitor), Key), Monitor),
   case Values of
-    error -> io:format("Nie ma takiej stacji! ~n"),
-      Monitor;
+    error -> {error, "Stacja nie istnieje!"};
     {ok, Measurements} ->  maps:update(getFullKey(maps:keys(Monitor), Key), maps:remove(#measurement{date=Date, type=Type}, Measurements), Monitor)
   end.
 
@@ -76,10 +72,10 @@ removeValue(Key, Date, Type, Monitor) ->
 getOneValue(Key, Date, Type, Monitor) ->
   Values = maps:find(getFullKey(maps:keys(Monitor), Key), Monitor),
   case Values of
-    error -> io:format("Nie ma takiej stacji! ~n");
+    error -> {error, "Stacja nie istnieje!"};
     {ok, Measurements} -> Value = maps:find(#measurement{date=Date, type=Type}, Measurements),
       case Value of
-        error -> io:format("brak pomiaru! ~n");
+        error -> {error, "Brak pomiaru"};
         {ok, Val} -> Val
       end
   end.
@@ -88,7 +84,7 @@ getOneValue(Key, Date, Type, Monitor) ->
 getStationMean(Key, Type, Monitor) ->
   FullKey = maps:find(getFullKey(maps:keys(Monitor), Key), Monitor),
   case FullKey of
-    error -> io:format("Nie ma takiej stacji! ~n");
+    error -> {error, "Stacja nie istnieje!"};
     {ok, Measurements} ->
       getMean(filterByType(maps:to_list(Measurements), Type, []), 0, 0)
   end.
@@ -129,7 +125,7 @@ filterByType([H | T], Type, Vals) ->
 
 %funkcja zwraca liste wartosci pomiarow z danego obszaru
 filterByArea(_, [], Vals) -> Vals;
-filterByArea({{Xl, Yl}, {Xr, Yr}}, [{#station{coords={X, Y}}, Val} | T] , Vals) when X > Xl, X < Xr, Y > Yl, Y < Yr ->
+filterByArea({{Xl, Yl}, {Xr, Yr}}, [{#station{coords={X, Y}}, Val} | T] , Vals) when X >= Xl, X =< Xr, Y >= Yl, Y =< Yr ->
   filterByArea({{Xl, Yl}, {Xr, Yr}}, T, [Val | Vals]);
 filterByArea(Border, [_ | T], Vals) -> filterByArea(Border, T, Vals).
 

@@ -1,0 +1,25 @@
+sprzęt:
+System operacyjny: Debian GNU/Linux 10
+Wersja Plazmy KDE: 5.14.5
+Wersja Qt: 5.11.3
+Wersja Szkieletów KDE: 5.54.0
+Wersja jądra: 4.19.0-6-amd64
+Architektura systemu: 64-bity
+Procesory: 4 × Intel® Core™ i5-5200U CPU @ 2.20GHz
+Pamięć: 11,6 GiB RAM-u
+
+3 przykładowe wyniki ( generowane funkcją parcelLocker:test() ):
+a)
+Czas wykonania sekwencyjnego: 689591
+Czas wykonania bardzo rownoleglego: 814338
+Czas wykonania troche rownoleglego: 324690
+
+b)
+Czas wykonania sekwencyjnego: 704514
+Czas wykonania bardzo rownoleglego: 808115
+Czas wykonania troche rownoleglego: 319167
+
+c)
+Czas wykonania sekwencyjnego: 693539
+Czas wykonania bardzo rownoleglego: 826431
+Czas wykonania troche rownoleglego: 318373

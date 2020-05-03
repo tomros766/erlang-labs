@@ -6,7 +6,7 @@
 %%% @end
 %%% Created : 01. kwi 2020 16:28
 %%%-------------------------------------------------------------------
--module('ParclLocker').
+-module(parcelLocker).
 -author("tomasz").
 
 %% API
@@ -76,13 +76,20 @@ testConcurr(People, Lockers) ->
 test() ->
   People = [{rand:uniform(10000), rand:uniform(10000)} || X <- lists:seq(1,1000)],
   Lockers = [{rand:uniform(10000), rand:uniform(10000)} || X <- lists:seq(1,10000)],
+  io:format("Ludzie: "),
+  printList(People),
+  io:format("Paczkomaty: "),
+  printList(Lockers),
   {T1, _} = timer:tc(?MODULE, testSeq, [People, Lockers, []]),
-  io:format("Czas wykonania sekwencyjnego: ~b ~n", [T1]),
+  io:format("~nCzas wykonania sekwencyjnego: ~b ~n", [T1]),
   {T2, _} = timer:tc(?MODULE, testConcurrAF, [People, Lockers]),
   io:format("Czas wykonania bardzo rownoleglego: ~b ~n", [T2]),
   {T3, _} = timer:tc(?MODULE, testConcurr, [People, Lockers]),
   io:format("Czas wykonania troche rownoleglego: ~b ~n", [T3]).
 
 
-
+printList([]) -> io:format("~n");
+printList([{X, Y} | T]) ->
+  io:format("{~B, ~B} ",[X, Y]),
+  printList(T).
 
